@@ -1,30 +1,27 @@
-import logging
 import telegram
 import time
 import random
+import logging
 from imdbpie import Imdb
 
-LAST_UPDATE_ID = None
 TOKEN = '116612566:AAGjN2chPXvtc-3inkiuAsRLfdDiyPTCy8c'
+
+LAST_UPDATE_ID = None
+MOVIES_IN_TOP = 250
 
 imdb = Imdb()
 top250 = imdb.top_250()
-current_movie = top250[random.randint(0, 249)]
-current_images_count = len(imdb.get_title_images(current_movie.get('tconst')))
-current_images = imdb.get_title_images(current_movie.get('tconst'))
-image = current_images[random.randint(0, current_images_count - 1)]
+current_image = None
+logger = None
 
 
 def main():
     global LAST_UPDATE_ID
 
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # Telegram Bot Authorization Token
     bot = telegram.Bot(TOKEN)
+    init_logger()
+    generate_image()
 
-    # This will be our global variable to keep the latest update_id when requesting
-    # for updates. It starts with the latest update_id if available.
     try:
         LAST_UPDATE_ID = bot.getUpdates()[-1].update_id
     except IndexError:
@@ -38,39 +35,50 @@ def main():
 def echo(bot):
     global LAST_UPDATE_ID
 
-    # Request updates from last updated_id
     for update in bot.getUpdates(offset=LAST_UPDATE_ID):
         if LAST_UPDATE_ID < update.update_id:
-            # chat_id is required to reply any message
             chat_id = update.message.chat_id
             message = update.message.text
 
             if '/next' in message:
-                next_image()
-                print(image)
+                if current_image is None:
+                    return
 
-                # Reply the message
-                bot.sendPhoto(chat_id=chat_id, photo=image.url)
-
-                # Updates global offset to get the new updates
+                bot.sendPhoto(chat_id=chat_id, photo=current_image.url)
+                generate_image()
                 LAST_UPDATE_ID = update.update_id
 
 
-def next_image():
-    global current_movie
-    current_movie = top250[random.randint(0, 249)]
+def generate_image():
+    global current_image
 
-    global current_images_count
-    current_images_count = len(imdb.get_title_images(current_movie.get('tconst')))
+    current_movie = top250[random.randint(0, MOVIES_IN_TOP - 1)]
+    current_images_list = get_canonical_images(imdb.get_title_images(current_movie.get('tconst')))
 
-    global current_images
-    current_images = imdb.get_title_images(current_movie.get('tconst'))
+    if len(current_images_list) == 0:
+        generate_image()
+        return
 
-    global image
-    image = current_images[random.randint(0, current_images_count - 1)]
+    current_image = current_images_list[random.randint(0, len(current_images_list) - 1)]
+    logging.warning(current_image.caption + " " + current_image.url)
 
-    # if image.width < image.height:
-    #     next_image()
+
+def get_canonical_images(images_list):
+    return [image for image in images_list
+            if image.caption.lower().startswith("still of")]
+
+
+def init_logger():
+    global logger
+    logger = logging.getLogger('BOT')
+    logger.setLevel(logging.INFO)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 if __name__ == '__main__':
     main()
