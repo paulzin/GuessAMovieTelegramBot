@@ -12,7 +12,7 @@ top250 = imdb.top_250()
 current_movie = top250[random.randint(0, 249)]
 current_images_count = len(imdb.get_title_images(current_movie.get('tconst')))
 current_images = imdb.get_title_images(current_movie.get('tconst'))
-image = current_images[random.randint(0, current_images_count)]
+image = current_images[random.randint(0, current_images_count - 1)]
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
 
     while True:
         echo(bot)
-        time.sleep(3)
+        time.sleep(1)
 
 
 def echo(bot):
@@ -67,7 +67,7 @@ def next_image():
     current_images = imdb.get_title_images(current_movie.get('tconst'))
 
     global image
-    image = current_images[random.randint(0, current_images_count)]
+    image = current_images[random.randint(0, current_images_count - 1)]
 
     # if image.width < image.height:
     #     next_image()
