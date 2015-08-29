@@ -19,19 +19,9 @@ def main():
     except IndexError:
         LAST_UPDATE_ID = None
 
+    movies_manager.init()
     s.enter(1, 1, get_update)
     s.run()
-
-
-def create_caption(movie_title):
-    result_caption = ''
-    title_words = movie_title.split(' ')
-
-    for word in title_words:
-        result_caption += str(telegram.Emoji.WHITE_MEDIUM_SQUARE) * len(word)
-        result_caption += '  '
-
-    return result_caption.strip()
 
 
 def get_update():
@@ -44,13 +34,13 @@ def get_update():
 
             if '/next' in message:
                 movie = movies_manager.get_next_movie()
-                movie_title = movie[0]
+                movie_title = movie[0][0]
+                movie_year = movie[0][1]
                 movie_photo = movie[1]
                 bot.sendChatAction(chat_id=chat_id, action=telegram.ChatAction.UPLOAD_PHOTO)
-                bot.sendPhoto(chat_id=chat_id, photo=movie_photo.url, caption=movie_title)
+                movie_caption = movies_manager.create_caption(movie_title, movie_year)
+                bot.sendPhoto(chat_id=chat_id, photo=movie_photo.url, caption=movie_caption)
                 LAST_UPDATE_ID = update.update_id
-            else:
-                print("")
 
     s.enter(1, 1, get_update)
 
