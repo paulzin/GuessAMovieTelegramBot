@@ -9,6 +9,7 @@ LAST_UPDATE_ID = None
 bot = telegram.Bot(config.TOKEN)
 
 s = sched.scheduler(time.time, time.sleep)
+chats_dict = {}
 
 
 def main():
@@ -32,7 +33,10 @@ def get_update():
             chat_id = update.message.chat_id
             message = update.message.text
 
+            print("Message", message)
+
             if '/next' in message:
+                # show next movie image
                 movie = movies_manager.get_next_movie()
                 movie_title = movie[0][0]
                 movie_year = movie[0][1]
@@ -41,6 +45,20 @@ def get_update():
                 movie_caption = movies_manager.create_caption(movie_title, movie_year)
                 bot.sendPhoto(chat_id=chat_id, photo=movie_photo.url, caption=movie_caption)
                 LAST_UPDATE_ID = update.update_id
+                chats_dict[chat_id] = movie_title
+            else:
+                # check the answer
+                actual_movie_title = chats_dict.get(chat_id)
+
+                if not actual_movie_title:
+                    continue
+
+                if message == actual_movie_title:
+                    bot.sendMessage(chat_id=chat_id, text="Correct!")
+                else:
+                    bot.sendMessage(chat_id=chat_id, text="Wrong!")
+
+                chats_dict.pop(chat_id)
 
     s.enter(1, 1, get_update)
 
