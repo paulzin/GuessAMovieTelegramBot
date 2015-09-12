@@ -68,13 +68,3 @@ def get_canonical_images(images_list):
     return [image for image in images_list
             if image.caption.lower().startswith("still of") and image_is_not_too_big(image)]
 
-
-def create_caption(title, year):
-    result_caption = ''
-    title_words = title.split(' ')
-
-    for word in title_words:
-        result_caption += "*" * len(word)
-        result_caption += ' '
-
-    return result_caption.strip() + " (" + year + ")"

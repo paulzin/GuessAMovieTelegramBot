@@ -3,6 +3,7 @@ import time
 import sched
 import movies_manager
 import config
+import strings_util
 
 
 LAST_UPDATE_ID = None
@@ -31,34 +32,47 @@ def get_update():
     for update in bot.getUpdates(offset=LAST_UPDATE_ID):
         if LAST_UPDATE_ID < update.update_id:
             chat_id = update.message.chat_id
-            message = update.message.text
+            message = update.message
 
-            print("Message", message)
-
-            if '/next' in message:
+            if strings_util.COMMAND_NEXT in message.text:
                 # show next movie image
                 movie = movies_manager.get_next_movie()
-                movie_title = movie[0][0]
-                movie_year = movie[0][1]
-                movie_photo = movie[1]
                 bot.sendChatAction(chat_id=chat_id, action=telegram.ChatAction.UPLOAD_PHOTO)
-                movie_caption = movies_manager.create_caption(movie_title, movie_year)
-                bot.sendPhoto(chat_id=chat_id, photo=movie_photo.url, caption=movie_caption)
-                LAST_UPDATE_ID = update.update_id
-                chats_dict[chat_id] = movie_title
+                movie_caption = strings_util.create_caption(movie)
+                bot.sendPhoto(chat_id=chat_id, photo=movie[1].url, caption=movie_caption)
+                chats_dict[chat_id] = (movie[0][0], None)
+            elif strings_util.COMMAND_HINT in message.text:
+                if not chats_dict.get(chat_id):
+                    continue
+                title = chats_dict.get(chat_id)[0]
+                old_hint = chats_dict.get(chat_id)[1]
+                new_hint = strings_util.get_hint(title, old_hint)
+                chats_dict[chat_id] = (chats_dict.get(chat_id)[0], new_hint)
+
+                if not new_hint:
+                    continue
+
+                if new_hint == title:
+                    bot.sendMessage(chat_id=chat_id, text=new_hint)
+                    chats_dict.pop(chat_id)
+                    continue
+
+                new_hint = strings_util.Emoji.FINGER_POINTS_RIGHT + " " + new_hint
+                bot.sendMessage(chat_id=chat_id, text=new_hint)
             else:
                 # check the answer
-                actual_movie_title = chats_dict.get(chat_id)
+                actual_movie_title = chats_dict.get(chat_id)[0]
 
                 if not actual_movie_title:
                     continue
 
-                if message == actual_movie_title:
-                    bot.sendMessage(chat_id=chat_id, text="Correct!")
+                if str.lower(message.text) == str.lower(actual_movie_title):
+                    bot.sendMessage(chat_id=chat_id, text=strings_util.get_correct_message())
+                    chats_dict.pop(chat_id)
                 else:
-                    bot.sendMessage(chat_id=chat_id, text="Wrong!")
+                    bot.sendMessage(chat_id=chat_id, text=strings_util.get_wrong_message())
 
-                chats_dict.pop(chat_id)
+            LAST_UPDATE_ID = update.update_id
 
     s.enter(1, 1, get_update)
 
