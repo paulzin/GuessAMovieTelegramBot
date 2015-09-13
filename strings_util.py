@@ -25,8 +25,8 @@ def convert_to_stars(text):
 
 
 def create_caption(movie):
-    title = movie[0][0]
-    year = movie[0][1]
+    title = movie.name
+    year = movie.year
 
     result_caption = ''
     title_words = title.split(' ')

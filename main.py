@@ -4,6 +4,7 @@ import sched
 import movies_manager
 import config
 import strings_util
+import random
 
 
 LAST_UPDATE_ID = None
@@ -36,11 +37,12 @@ def get_update():
 
             if strings_util.COMMAND_NEXT in message.text:
                 # show next movie image
-                movie = movies_manager.get_next_movie()
+                title = movies_manager.get_next_movie()
                 bot.sendChatAction(chat_id=chat_id, action=telegram.ChatAction.UPLOAD_PHOTO)
-                movie_caption = strings_util.create_caption(movie)
-                bot.sendPhoto(chat_id=chat_id, photo=movie[1].url, caption=movie_caption)
-                chats_dict[chat_id] = (movie[0][0], None)
+                title_caption = strings_util.create_caption(title)
+                title_image = random.choice(title.images)
+                bot.sendPhoto(chat_id=chat_id, photo=title_image.url, caption=title_caption)
+                chats_dict[chat_id] = (title.name, None)
             elif strings_util.COMMAND_HINT in message.text:
                 if not chats_dict.get(chat_id):
                     continue
@@ -61,10 +63,10 @@ def get_update():
                 bot.sendMessage(chat_id=chat_id, text=new_hint)
             else:
                 # check the answer
-                actual_movie_title = chats_dict.get(chat_id)[0]
-
-                if not actual_movie_title:
+                if not chats_dict.get(chat_id) or not chats_dict.get(chat_id)[0]:
                     continue
+
+                actual_movie_title = chats_dict.get(chat_id)[0]
 
                 if str.lower(message.text) == str.lower(actual_movie_title):
                     bot.sendMessage(chat_id=chat_id, text=strings_util.get_correct_message())

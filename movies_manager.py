@@ -2,62 +2,66 @@ import random
 import pickle
 from time import gmtime, strftime
 from imdbpie import Imdb
+from imdb_manager import ImdbManager
+from title import Title
 
 movies_in_top = 250
 max_image_dimension = 2500
+
 imdb = Imdb()
-top250 = imdb.top_250()
-movies_dict = {}
+imdb_manager = ImdbManager()
+
+titles = []
+
 file_name = 'movie_data.pickle'
 
 
 def init():
-    global movies_dict
+    global titles
 
-    loaded_dict = None
+    loaded_titles = None
 
     try:
         try:
             with open(file_name, 'rb') as f:
-                loaded_dict = pickle.load(f)
+                loaded_titles = pickle.load(f)
         except FileNotFoundError:
             open(file_name, 'wb+')
-        if loaded_dict is not None:
+        if loaded_titles is not None:
             print("Loaded from cache")
-            movies_dict = loaded_dict
+            titles = loaded_titles
             return
     except ValueError:
         print("Cannot read json")
 
     print("Start generating:", strftime("%a, %d %b %Y %H:%M:%S", gmtime()))
+    print("Fetching popular started...:", strftime("%a, %d %b %Y %H:%M:%S", gmtime()))
+    imdb_manager.fetch_popular_titles()
+    print("Fetching popular ended...:", strftime("%a, %d %b %Y %H:%M:%S", gmtime()))
+    popular_titles = imdb_manager.title_id_list
 
     total_images_count = 0
     movies_count = 0
 
-    for movie in top250:
-        images_list = get_canonical_images(imdb.get_title_images(movie.get('tconst')))
+    for title in popular_titles:
+        images_list = get_canonical_images(imdb.get_title_images(title.title_id))
         total_images_count += len(images_list)
         movies_count += 1
-        print(movies_count)
         if len(images_list) > 0:
-            movies_dict[(movie.get("title"), movie.get("year"))] = images_list
+            titles.append(Title(title.name, title.year, images_list))
 
     with open(file_name, 'wb') as f:
-        pickle.dump(movies_dict, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(titles, f, pickle.HIGHEST_PROTOCOL)
 
-    print("Movies with images:", str(len(movies_dict)))
+    print("Movies with images:", str(len(titles)))
     print("Total images:", str(total_images_count))
     print("End generating:", strftime("%a, %d %b %Y %H:%M:%S", gmtime()))
 
 
 def get_next_movie():
-    movie_object = random.choice(list(movies_dict.items()))
-    photo_object = random.choice(movie_object[1])
-    movie_title = movie_object[0][0]
-    movie_year = movie_object[0][1]
-    movie_photo = photo_object.url
-    print(movie_title + " (" + movie_year + ") " + movie_photo)
-    return movie_object[0], random.choice(movie_object[1])
+    title_object = random.choice(list(titles))
+    print(title_object.name, '(' + title_object.year + ')', '- images count: ' + str(len(title_object.images)))
+    return title_object
 
 
 def image_is_not_too_big(image):
@@ -67,4 +71,6 @@ def image_is_not_too_big(image):
 def get_canonical_images(images_list):
     return [image for image in images_list
             if image.caption.lower().startswith("still of") and image_is_not_too_big(image)]
+
+
 
