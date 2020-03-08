@@ -1,3 +1,3 @@
 # GuessAMovieTelegramBot
 
-A fun Telegran game for guessing famous movies by photos.
+A fun Telegran game for guessing famous movies by stills.
